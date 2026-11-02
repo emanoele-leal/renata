@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Controle de ações da obra · Kanban & Gestão Completa</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f4f6;--sf:#fff;--tx:#1f2937;--mu:#6b7280;--bd:#e5e7eb;--ac:#d97706;--hi:#dc2626;--md:#d97706;--lo:#16a34a;--col:#e9ebef}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#14161a;--sf:#21242b;--tx:#e5e7eb;--mu:#9ca3af;--bd:#343842;--col:#1b1e24}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#14161a;--sf:#21242b;--tx:#e5e7eb;--mu:#9ca3af;--bd:#343842;--col:#1b1e24}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px}
+h1{font-size:18px;margin:0;flex:1 1 220px}
+h1 small{display:block;font-weight:400;color:var(--mu);font-size:12px}
+button,select,input,textarea{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+
+/* Barra de Filtros e Alternância de Visão */
+.filters-bar{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 10px;align-items:center}
+.filters-bar input, .filters-bar select{padding:5px 8px;font-size:13px}
+.view-toggle{display:flex;background:var(--col);border-radius:6px;padding:2px;gap:2px}
+.view-toggle button{border:0;background:transparent;padding:4px 12px;font-size:13px;border-radius:4px;font-weight:500}
+.view-toggle button.active{background:var(--sf);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+/* Board Kanban (5 Colunas) */
+.board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:10px;padding:0 16px 20px;overflow-x:auto}
+.col{background:var(--col);border-radius:10px;padding:10px;min-height:300px}
+.col.over{outline:2px dashed var(--ac)}
+.col h2{font-size:12px;margin:0 0 10px;display:flex;justify-content:space-between;text-transform:uppercase;letter-spacing:.04em;align-items:center}
+.col h2 span{color:var(--mu);font-weight:600;background:var(--sf);padding:1px 6px;border-radius:10px;font-size:11px}
+.card{background:var(--sf);border:1px solid var(--bd);border-left:4px solid var(--md);border-radius:8px;padding:9px 10px;margin-bottom:8px;cursor:grab}
+.card.alta{border-left-color:var(--hi)}.card.baixa{border-left-color:var(--lo)}
+.card b{display:block;margin-bottom:4px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;color:var(--mu);font-size:11px}
+.tag{background:var(--bg);border-radius:4px;padding:1px 5px}
+.late{color:var(--hi);font-weight:600}
+.mv{display:flex;justify-content:space-between;margin-top:8px;padding-top:4px;border-top:1px dashed var(--bd)}
+.mv button{padding:1px 6px;font-size:11px}
+
+/* Dialogs & Modais */
+dialog{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:10px;width:min(450px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+label{display:block;font-size:12px;color:var(--mu);margin-top:8px}
+dialog input,dialog select,dialog textarea{width:100%}
+.row{display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
+
+/* Navegação e Tabelas */
+.tabs{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.tb{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tw{overflow-x:auto;background:var(--sf);border:1px solid var(--bd);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu);background:var(--col)}
+tr:last-child td{border-bottom:0}
+.st{border-radius:10px;padding:2px 8px;font-size:11px;background:var(--bg);white-space:nowrap;font-weight:500}
+.st.todo{border:1px solid var(--mu)}
+.st.doing{background:#fef3c7;color:#92400e}
+.st.wait{background:#e0e7ff;color:#3730a3}
+.st.done{background:#dcfce7;color:#166534}
+.st.block{background:#fee2e2;color:#991b1b}
+
+/* Métricas KPIs Globais */
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:0 16px 12px}
+.kc{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column}
+.kc small{color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.kc b{font-size:18px;margin-top:2px}
+
+/* Controle de Visibilidade das Abas */
+#tbl_view,#com,#fin,#pnl,#rdo,#cot,#med,#qual{display:none}
+body.v-table #board{display:none}
+body.v-table #tbl_view{display:block}
+
+body.vcom #com,body.vfin #fin,body.vpnl #pnl,body.vrdo #rdo,body.vcot #cot,body.vmed #med,body.vqual #qual{display:block}
+body.vcom #board,body.vcom #tbl_view,body.vcom .filters-bar,body.vcom .kp,
+body.vfin #board,body.vfin #tbl_view,body.vfin .filters-bar,body.vfin .kp,
+body.vpnl #board,body.vpnl #tbl_view,body.vpnl .filters-bar,body.vpnl .kp,
+body.vrdo #board,body.vrdo #tbl_view,body.vrdo .filters-bar,body.vrdo .kp,
+body.vcot #board,body.vcot #tbl_view,body.vcot .filters-bar,body.vcot .kp,
+body.vmed #board,body.vmed #tbl_view,body.vmed .filters-bar,body.vmed .kp,
+body.vqual #board,body.vqual #tbl_view,body.vqual .filters-bar,body.vqual .kp {display:none}
+
+.bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
+.bar i{flex:1;height:8px;background:var(--col);border-radius:4px;overflow:hidden}
+.bar u{display:block;height:100%;background:var(--lo)}
+.bar span:first-child{flex:0 0 min(260px,45%)}
+td input.n{width:110px;text-align:right}
+.rc{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:10px}
+.rc h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rc p{margin:4px 0;white-space:pre-wrap}
+.rc small{display:block;margin-top:6px;color:var(--mu);text-transform:uppercase;font-size:11px}
+.ph{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ph span{position:relative}
+.ph img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--bd);display:block}
+.ph b{position:absolute;top:-5px;right:-5px;background:var(--hi);color:#fff;border-radius:50%;width:18px;height:18px;text-align:center;line-height:18px;font-size:12px;cursor:pointer}
+#dlg3,#dlg4,#dlg5{max-height:90vh;overflow:auto}
+table.qt{min-width:0;font-size:13px}
+.qt tr.sel td{font-weight:600}
+.qt .bd{font-size:10px;border-radius:4px;padding:1px 5px;background:var(--lo);color:#fff;margin-left:4px;white-space:nowrap;font-weight:400}
+.qr{display:grid;grid-template-columns:1fr 95px 70px 28px;gap:4px;margin-bottom:4px}
+.qr button{padding:0}
+.ck{display:flex;gap:6px;align-items:center;margin:3px 0}
+.ck label{margin:0;flex:1;font-size:13px;color:var(--tx)}
+.ck input{width:auto}
+.ck button{padding:0 6px;font-size:12px}
+.pg{height:6px;background:var(--col);border-radius:3px;overflow:hidden;margin:4px 0 8px}
+.pg u{display:block;height:100%;background:var(--lo)}
+</style>
+</head>
+<body class="v-kanban">
+
+<header>
+  <h1>Controle de ações da obra<small>Reforma de apartamento · modelo Obra Prima</small></h1>
+  <button id="csv">Exportar CSV</button>
+  <button class="pri" id="add">+ Nova ação</button>
+</header>
+
+<nav class="tabs">
+  <button id="tk" class="on">Ações (Kanban)</button>
+  <button id="tc">Comunicação</button>
+  <button id="tr">Diário (RDO)</button>
+  <button id="tq">Cotações</button>
+  <button id="tm">Medições</button>
+  <button id="tz">Qualidade</button>
+  <button id="tf">Financeiro</button>
+  <button id="tp">Painel</button>
+</nav>
+
+<!-- Métricas Globais (KPIs) -->
+<section class="kp" id="global_kpis"></section>
+
+<!-- Filtros Inteligentes e Alternância de Visualização -->
+<section class="filters-bar">
+  <div class="view-toggle">
+    <button id="btn_v_kanban" class="active">🗂️ Quadro Kanban</button>
+    <button id="btn_v_table">📋 Tabela Geral</button>
+  </div>
+  <input type="search" id="f_search" placeholder="Buscar título ou responsável..." style="flex:1;min-width:180px;">
+  <select id="fa" aria-label="Filtrar por ambiente"></select>
+  <select id="fe" aria-label="Filtrar por etapa"></select>
+  <select id="fp" aria-label="Filtrar por prioridade">
+    <option value="">Todas as Prioridades</option>
+    <option value="alta">Alta</option>
+    <option value="media">Média</option>
+    <option value="baixa">Baixa</option>
+  </select>
+</section>
+
+<!-- Quadro Kanban (5 Colunas) -->
+<div class="board" id="board"></div>
+
+<!-- Tabela Geral de Ações -->
+<section id="tbl_view" style="padding:0 16px 20px">
+  <div class="tw">
+    <table id="tbl_actions">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Ação / Descrição</th>
+          <th>Ambiente</th>
+          <th>Etapa</th>
+          <th>Responsável</th>
+          <th>Prazo</th>
+          <th>Prioridade</th>
+          <th>Status</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Módulo Comunicação -->
+<section id="com" style="padding:0 16px 20px">
+  <div class="tb"><select id="cs" aria-label="Filtrar por status"></select><span style="flex:1"></span><button id="ccsv">Exportar CSV</button><button class="pri" id="cadd">+ Nova comunicação</button></div>
+  <div class="tw"><table id="ct"></table></div>
+</section>
+
+<!-- Módulo Financeiro -->
+<section id="fin" style="padding:0 16px 20px">
+  <div class="tb"><b style="flex:1">Controle financeiro por etapa</b><button id="fcsv">Exportar CSV</button></div>
+  <div class="tw"><table id="ft"></table></div>
+  <p style="color:var(--mu);font-size:12px;margin-top:6px">Orçado: previsto no orçamento. Contratado (serviços): valor fechado com empreiteiros. Compras fechadas: soma automática dos fornecedores escolhidos em Cotações. O contratado total é a soma dos dois. Pago: já desembolsado. A pagar: contratado menos pago. Desvio positivo: contratado acima do orçado.</p>
+</section>
+
+<!-- Módulo Painel KPI -->
+<section id="pnl" style="padding:0 16px 20px">
+  <div class="kp" id="pk"></div>
+  <b>Ações concluídas por etapa</b>
+  <div id="pb"></div>
+</section>
+
+<!-- Módulo Diário de Obras (RDO) -->
+<section id="rdo" style="padding:0 16px 20px">
+  <div class="tb"><b style="flex:1">Diário de obras (RDO)</b><button id="rcsv">Exportar CSV</button><button class="pri" id="radd">+ Novo RDO</button></div>
+  <p id="rerr" style="color:var(--hi)" hidden>Não foi possível salvar: o espaço do navegador está cheio. Remova algumas fotos e salve de novo.</p>
+  <div id="rl"></div>
+</section>
+
+<!-- Módulo Cotações -->
+<section id="cot" style="padding:0 16px 20px">
+  <div class="tb"><select id="qfs" aria-label="Filtrar por status do pedido"></select><span id="qtot" style="align-self:center;color:var(--mu)"></span><span style="flex:1"></span><button id="qcsv">Exportar CSV</button><button class="pri" id="qnew">+ Novo item</button></div>
+  <div id="ql"></div>
+</section>
+
+<!-- Módulo Medições -->
+<section id="med" style="padding:0 16px 20px">
+  <div class="tb"><span id="mdtot" style="align-self:center;color:var(--mu)"></span><span style="flex:1"></span><button id="mdcsv">Exportar CSV</button><button class="pri" id="mdnew">+ Nova medição</button></div>
+  <div id="mdl"></div>
+</section>
+
+<!-- Módulo Qualidade -->
+<section id="qual" style="padding:0 16px 20px">
+  <div class="tb"><b style="flex:1">Checklist de qualidade por ambiente</b><span id="ztot" style="align-self:center;color:var(--mu)"></span></div>
+  <div id="zl"></div>
+</section>
+
+<!-- DIÁLOGOS / MODAIS -->
+<dialog id="dlg">
+  <form method="dialog" id="f">
+    <b id="dt">Ação</b>
+    <label>Descrição da ação<input id="t" required></label>
+    <label>Ambiente<select id="a"></select></label>
+    <label>Etapa<select id="e"></select></label>
+    <label>Responsável<input id="r"></label>
+    <label>Prazo<input id="d" type="date"></label>
+    <label>Prioridade<select id="p"><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></label>
+    <label>Status (Kanban)<select id="c"></select></label>
+    <label>Observações / Impeditivos<textarea id="o" rows="2"></textarea></label>
+    <div class="row"><button type="button" id="del">Excluir</button><span><button type="button" id="cx">Cancelar</button> <button class="pri" value="ok">Salvar</button></span></div>
+  </form>
+</dialog>
+
+<dialog id="dlg2">
+  <form method="dialog" id="f2">
+    <b id="dt2">Comunicação</b>
+    <label>Data<input id="m_dt" type="date" required></label>
+    <label>Assunto<input id="m_ass" required></label>
+    <label>Ambiente<select id="m_amb"></select></label>
+    <label>De<input id="m_de"></label>
+    <label>Para<input id="m_para"></label>
+    <label>Telefone<input id="m_tel" type="tel" placeholder="(41) 99999-9999"></label>
+    <label>E-mail<input id="m_mail" type="email"></label>
+    <label>Meio<select id="m_meio"></select></label>
+    <label>Decisão / resumo<textarea id="m_res" rows="3"></textarea></label>
+    <label>Retorno até<input id="m_pz" type="date"></label>
+    <label>Status<select id="m_st"></select></label>
+    <div class="row"><button type="button" id="m_del">Excluir</button><span><button type="button" id="m_cx">Cancelar</button> <button class="pri" value="ok">Salvar</button></span></div>
+  </form>
+</dialog>
+
+<dialog id="dlg3">
+  <form method="dialog" id="f3">
+    <b id="dt3">RDO</b>
+    <fieldset id="rf" style="border:0;padding:0;margin:0">
+      <label>Data<input id="r_dt" type="date" required></label>
+      <label>Clima<select id="r_cm"></select></label>
+      <label>Equipe presente (função e quantidade)<textarea id="r_eq" rows="2" placeholder="Ex.: 2 pedreiros, 1 servente, 1 eletricista"></textarea></label>
+      <label>Atividades executadas<textarea id="r_at" rows="3" required></textarea></label>
+      <label>Ocorrências<textarea id="r_oc" rows="2"></textarea></label>
+      <label>Observações<textarea id="r_ob" rows="2"></textarea></label>
+      <label>Fotos como evidência (até 6)<input id="r_f" type="file" accept="image/*" multiple></label>
+      <div class="ph" id="r_ph"></div>
+      <label>Aprovado por (necessário para aprovar)<input id="r_apr"></label>
+    </fieldset>
+    <div class="row"><button type="button" id="r_del">Excluir</button><span><button type="button" id="r_cx">Fechar</button> <button type="button" id="r_re" hidden>Reabrir</button> <button id="r_save" value="save">Salvar rascunho</button> <button class="pri" id="r_ap" value="ap">Aprovar</button></span></div>
+  </form>
+</dialog>
+
+<dialog id="dlg4">
+  <form method="dialog" id="f4">
+    <b id="dt4">Item de compra</b>
+    <label>Item<input id="q_it" required placeholder="Ex.: Esquadrias de alumínio"></label>
+    <label>Ambiente<select id="q_amb"></select></label>
+    <label>Etapa<select id="q_eta"></select></label>
+    <label>Cotações (fornecedor, valor, prazo em dias)</label>
+    <div id="q_list"></div>
+    <button type="button" id="q_add">+ Adicionar cotação</button>
+    <label>Fornecedor escolhido<select id="q_esc"></select></label>
+    <label>Status do pedido<select id="q_st"></select></label>
+    <label>Data do pedido<input id="q_pd" type="date"></label>
+    <label>Entrega prevista (se vazia, é calculada pelo prazo do escolhido)<input id="q_en" type="date"></label>
+    <label>Observações (condições de pagamento, frete etc.)<textarea id="q_ob" rows="2"></textarea></label>
+    <div class="row"><button type="button" id="q_del">Excluir</button><span><button type="button" id="q_cx">Cancelar</button> <button class="pri" value="ok">Salvar</button></span></div>
+  </form>
+</dialog>
+
+<dialog id="dlg5">
+  <form method="dialog" id="f5">
+    <b id="dt5">Medição</b>
+    <label>Empreiteiro / prestador<input id="md_emp" list="md_dl" required></label>
+    <datalist id="md_dl"></datalist>
+    <label>Serviço medido<input id="md_sv" required></label>
+    <label>Etapa<select id="md_et"></select></label>
+    <label>Valor contratado do serviço (R$)<input id="md_vc" type="number" min="0" step="0.01"></label>
+    <label>% executado acumulado<input id="md_pc" type="number" min="0" max="100" step="1"></label>
+    <label>Data da medição<input id="md_dt" type="date"></label>
+    <label>Status<select id="md_st"></select></label>
+    <label>Observações<textarea id="md_ob" rows="2"></textarea></label>
+    <div class="row"><button type="button" id="md_del">Excluir</button><span><button type="button" id="md_cx">Cancelar</button> <button class="pri" value="ok">Salvar</button></span></div>
+  </form>
+</dialog>
+
+<script>
+// 5 Colunas Kanban
+const COLS=[
+  ["todo","A fazer"],
+  ["doing","Em andamento"],
+  ["wait","Em validação"],
+  ["done","Concluído"],
+  ["block","Bloqueado"]
+];
+const KEY="kanban-obra-v4";
+const AMB=["Cozinha/Lavanderia","Quarto 1","Quarto 2","Bwc Social","Bwc Suíte","Sala","Sacada","Hall","Circulação","Todos"];
+const ETA=["Serviços Preliminares e Demolições","Estrutura e Consolidação","Paredes, Painéis e Fechamentos","Coberturas e Impermeabilização","Esquadrias e Ferragens","Revestimentos e Tratamentos de Superfície","Pisos, Rodapés e Soleiras","Instalações Hidrosanitárias e de Gás","Instalações Elétricas e de Telecomunicações","Pintura e Acabamentos Finais","Limpeza Final e Desmobilização"];
+
+const seed=[
+["Vistoria e levantamento de medidas","Todos",0,"Eng. Roberto","2026-11-01","alta","doing","Medições enviadas"],
+["Proteção de áreas e remoção de entulho","Todos",0,"Mestre João","2026-11-05","media","todo",""],
+["Demolição de paredes, pisos e azulejos","Cozinha/Lavanderia",0,"Mestre João","2026-11-08","alta","todo",""],
+["Impermeabilização de áreas molhadas","Cozinha/Lavanderia",3,"Arq. Amanda","2026-11-12","alta","wait","Teste de estanqueidade"],
+["Troca das esquadrias","Todos",4,"Carlos","2026-11-15","media","block","Aguardando fornecedor"],
+["Pintura de paredes e tetos","Todos",9,"Pintor Marcos","2026-11-20","baixa","done","Finalizado com sucesso"]
+].map((x,i)=>({id:i+1,t:x[0],a:x[1],e:ETA[x[2]],r:x[3],d:x[4],p:x[5],c:x[6],o:x[7]}));
+
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
+if(!Array.isArray(S))S=seed;
+
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PL={alta:"Alta",media:"Média",baixa:"Baixa"};
+let drag=null,edit=null;
+
+$("c").innerHTML=COLS.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join("");
+$("a").innerHTML=AMB.map(a=>`<option>${esc(a)}</option>`).join("");
+$("e").innerHTML=ETA.map(a=>`<option>${esc(a)}</option>`).join("");
+
+function fmt(d){if(!d)return"";const [y,m,dd]=d.split("-");return dd+"/"+m+"/"+y}
+
+// Métricas Globais
+function renderMetrics(){
+  const tot=S.length;
+  const counts={todo:0,doing:0,wait:0,done:0,block:0};
+  S.forEach(s=>counts[s.c]=(counts[s.c]||0)+1);
+  $("global_kpis").innerHTML=
+    `<div class="kc"><small>Total de Ações</small><b>${tot}</b></div>`+
+    `<div class="kc"><small>🔴 A Fazer</small><b>${counts.todo}</b></div>`+
+    `<div class="kc"><small>🟡 Em Andamento</small><b>${counts.doing}</b></div>`+
+    `<div class="kc"><small>🔵 Em Validação</small><b>${counts.wait}</b></div>`+
+    `<div class="kc"><small>🟢 Concluído</small><b>${counts.done}</b></div>`+
+    `<div class="kc"><small>⚠️ Bloqueado</small><b>${counts.block}</b></div>`;
+}
+
+function getFilteredData(){
+  const fa=$("fa").value, fe=$("fe").value, fp=$("fp").value, q=$("f_search").value.toLowerCase().trim();
+  return S.filter(s=>{
+    const matchAmb=!fa||s.a===fa;
+    const matchEta=!fe||s.e===fe;
+    const matchPrio=!fp||s.p===fp;
+    const matchQ=!q||(s.t.toLowerCase().includes(q)||(s.r&&s.r.toLowerCase().includes(q)));
+    return matchAmb && matchEta && matchPrio && matchQ;
+  });
+}
+
+function render(){
+  renderMetrics();
+  const fa=$("fa").value,fe=$("fe").value;
+  if(!$("fa").children.length||$("fa").children[0].value!=="")
+    $("fa").innerHTML='<option value="">Todos os ambientes</option>'+AMB.map(a=>`<option${a===fa?" selected":""}>${esc(a)}</option>`).join("");
+  if(!$("fe").children.length||$("fe").children[0].value!=="")
+    $("fe").innerHTML='<option value="">Todas as etapas</option>'+ETA.map(a=>`<option${a===fe?" selected":""}>${esc(a)}</option>`).join("");
+
+  const filtered=getFilteredData();
+  const today=new Date().toISOString().slice(0,10);
+
+  // Render Kanban (5 Colunas)
+  $("board").innerHTML=COLS.map(([k,n],ci)=>{
+    const items=filtered.filter(s=>s.c===k).sort((x,y)=>ETA.indexOf(x.e)-ETA.indexOf(y.e));
+    return `<section class="col" data-c="${k}"><h2>${n} <span>${items.length}</span></h2>`+items.map(s=>{
+      const late=s.d&&s.d<today&&k!=="done";
+      return `<div class="card ${s.p}" draggable="true" data-id="${s.id}"><b>${esc(s.t)}</b><div class="meta">`+
+      (s.a?`<span class="tag">${esc(s.a)}</span>`:"")+(s.e?`<span class="tag">${esc(s.e)}</span>`:"")+(s.r?`<span>👤 ${esc(s.r)}</span>`:"")+
+      (s.d?`<span class="${late?"late":""}">📅 ${fmt(s.d)}${late?" · atrasada":""}</span>`:"")+`<span>${PL[s.p]||""}</span></div>`+
+      (s.o?`<div style="font-size:11px;color:var(--mu);margin-top:4px;">💬 ${esc(s.o)}</div>`:"")+
+      `<div class="mv"><button data-m="-1" ${ci===0?"disabled":""}>◀</button><button data-e="1">Editar</button><button data-m="1" ${ci===COLS.length-1?"disabled":""}>▶</button></div></div>`}).join("")+`</section>`}).join("");
+
+  // Render Tabela Geral
+  const tbody=$("tbl_actions").querySelector("tbody");
+  tbody.innerHTML=filtered.length?filtered.map(s=>{
+    const late=s.d&&s.d<today&&s.c!=="done";
+    const stObj=COLS.find(c=>c[0]===s.c)||[s.c,s.c];
+    return `<tr data-id="${s.id}">`+
+      `<td><b>#${s.id}</b></td>`+
+      `<td><b>${esc(s.t)}</b>${s.o?`<br><small style="color:var(--mu)">${esc(s.o)}</small>`:""}</td>`+
+      `<td>${esc(s.a)}</td>`+
+      `<td>${esc(s.e)}</td>`+
+      `<td>${esc(s.r||"—")}</td>`+
+      `<td class="${late?"late":""}">${fmt(s.d)}${late?" ⚠️":""}</td>`+
+      `<td>${PL[s.p]||""}</td>`+
+      `<td><span class="st ${s.c}">${stObj[1]}</span></td>`+
+      `<td><button data-te="1">Editar</button></td>`+
+      `</tr>`;
+  }).join(""):'<tr><td colspan="9" style="text-align:center;color:var(--mu)">Nenhuma ação encontrada.</td></tr>';
+}
+
+// Filtros em tempo real
+$("f_search").oninput=render;
+$("fa").onchange=render;
+$("fe").onchange=render;
+$("fp").onchange=render;
+
+// Alternância de Visão
+$("btn_v_kanban").onclick=()=>{
+  document.body.classList.remove("v-table");
+  document.body.classList.add("v-kanban");
+  $("btn_v_kanban").classList.add("active");
+  $("btn_v_table").classList.remove("active");
+};
+$("btn_v_table").onclick=()=>{
+  document.body.classList.remove("v-kanban");
+  document.body.classList.add("v-table");
+  $("btn_v_table").classList.add("active");
+  $("btn_v_kanban").classList.remove("active");
+};
+
+// Eventos Kanban Drag & Drop / Cliques
+$("board").addEventListener("click",e=>{
+  const card=e.target.closest(".card");if(!card)return;
+  const s=S.find(x=>x.id==card.dataset.id);
+  if(e.target.dataset.m){const i=COLS.findIndex(c=>c[0]===s.c)+ +e.target.dataset.m;if(i>=0&&i<COLS.length){s.c=COLS[i][0];save();render()}}
+  else if(e.target.dataset.e)open(s);
+});
+
+$("tbl_actions").addEventListener("click",e=>{
+  if(!e.target.dataset.te)return;
+  const s=S.find(x=>x.id==e.target.closest("tr").dataset.id);
+  if(s)open(s);
+});
+
+$("board").addEventListener("dragstart",e=>{const c=e.target.closest(".card");if(c){drag=c.dataset.id;e.dataTransfer.effectAllowed="move"}});
+$("board").addEventListener("dragover",e=>{const c=e.target.closest(".col");if(c){e.preventDefault();document.querySelectorAll(".col").forEach(x=>x.classList.toggle("over",x===c))}});
+$("board").addEventListener("drop",e=>{e.preventDefault();const c=e.target.closest(".col");const s=S.find(x=>x.id==drag);if(c&&s){s.c=c.dataset.c;save()}render()});
+$("board").addEventListener("dragend",()=>render());
+
+function open(s){
+  edit=s;$("dt").textContent=s.id?"Editar ação":"Nova ação";
+  ["t","a","e","r","d","p","c","o"].forEach(k=>$(k).value=s[k]||"");
+  $("del").style.visibility=s.id?"visible":"hidden";$("dlg").showModal();
+}
+$("add").onclick=()=>open({p:"media",c:"todo",a:AMB[0],e:ETA[0]});
+$("cx").onclick=()=>$("dlg").close();
+$("f").addEventListener("submit",e=>{
+  if(e.submitter&&e.submitter.value!=="ok")return;
+  const v={};["t","a","e","r","d","p","c","o"].forEach(k=>v[k]=$(k).value.trim());
+  if(edit.id)Object.assign(edit,v);else S.push({id:Math.max(0,...S.map(s=>s.id))+1,...v});
+  save();render();
+});
+$("del").onclick=()=>{S=S.filter(s=>s.id!==edit.id);save();$("dlg").close();render()};
+$("csv").onclick=()=>{
+  const rows=[["ID","Ação","Ambiente","Etapa","Responsável","Prazo","Prioridade","Status","Observações"]].concat(S.map(s=>[s.id,s.t,s.a,s.e,s.r,fmt(s.d),PL[s.p],(COLS.find(c=>c[0]===s.c)||[,''])[1],s.o]));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x||"").replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="acoes-obra.csv";a.click();
+};
+
+/* ===== Planilha de Comunicação (Código Completo) ===== */
+const KC="comunicacao-obra-v1",MEIO=["WhatsApp","E-mail","Reunião","Telefone","Visita à obra","Ata/Documento"],CST=["Pendente","Respondido","Encerrado"];
+const T0=new Date().toISOString().slice(0,10);
+let M;try{M=JSON.parse(localStorage.getItem(KC)||"null")}catch(e){M=null}
+if(!Array.isArray(M))M=[
+{id:1,dt:T0,ass:"Definição do layout e posição da bacia do novo banheiro",amb:"Bwc Suíte",de:"",para:"",meio:"Reunião",res:"",pz:"",st:"Pendente"},
+{id:2,dt:T0,ass:"Confirmação do prazo de entrega das esquadrias",amb:"Todos",de:"",para:"",meio:"WhatsApp",res:"",pz:"",st:"Pendente"},
+{id:3,dt:T0,ass:"Aprovação do orçamento físico-financeiro",amb:"Todos",de:"",para:"",meio:"E-mail",res:"",pz:"",st:"Pendente"}];
+const saveM=()=>{try{localStorage.setItem(KC,JSON.stringify(M))}catch(e){}};
+$("m_amb").innerHTML=AMB.map(a=>`<option>${esc(a)}</option>`).join("");
+$("m_meio").innerHTML=MEIO.map(a=>`<option>${esc(a)}</option>`).join("");
+$("m_st").innerHTML=CST.map(a=>`<option>${esc(a)}</option>`).join("");
+const MF=["dt","ass","amb","de","para","tel","mail","meio","res","pz","st"];
+let editM=null;
+const ctt=m=>(m.tel?`<a href="tel:${esc(String(m.tel).replace(/[^\d+]/g,""))}">${esc(m.tel)}</a>`:"")+(m.tel&&m.mail?"<br>":"")+(m.mail?`<a href="mailto:${esc(m.mail)}">${esc(m.mail)}</a>`:"");
+function renderM(){
+  const fs=$("cs").value;
+  $("cs").innerHTML='<option value="">Todos os status</option>'+CST.map(a=>`<option${a===fs?" selected":""}>${a}</option>`).join("");
+  const rows=M.filter(m=>!fs||m.st===fs).sort((a,b)=>(b.dt||"").localeCompare(a.dt||""));
+  $("ct").innerHTML='<thead><tr><th>Data</th><th>Assunto</th><th>Ambiente</th><th>De → Para</th><th>Contato</th><th>Meio</th><th>Decisão / resumo</th><th>Retorno até</th><th>Status</th><th></th></tr></thead><tbody>'+
+  (rows.length?rows.map(m=>{
+    const late=m.pz&&m.pz<T0&&m.st==="Pendente";
+    return `<tr data-id="${m.id}"><td>${fmt(m.dt)}</td><td><b>${esc(m.ass)}</b></td><td>${esc(m.amb)}</td><td>${esc(m.de)}${m.de||m.para?" → ":""}${esc(m.para)}</td><td>${ctt(m)}</td><td>${esc(m.meio)}</td><td>${esc(m.res)}</td><td class="${late?"late":""}">${fmt(m.pz)}${late?" · atrasado":""}</td><td><span class="st">${esc(m.st)}</span></td><td><button data-me="1">Editar</button></td></tr>`}).join(""):'<tr><td colspan="10">Nenhuma comunicação registrada.</td></tr>')+'</tbody>';
+}
+function openM(m){
+  editM=m;$("dt2").textContent=m.id?"Editar comunicação":"Nova comunicação";
+  MF.forEach(k=>$("m_"+k).value=m[k]||"");
+  $("m_del").style.visibility=m.id?"visible":"hidden";$("dlg2").showModal();
+}
+$("ct").addEventListener("click",e=>{
+  if(!e.target.dataset.me)return;
+  const m=M.find(x=>x.id==e.target.closest("tr").dataset.id);if(m)openM(m);
+});
+$("cadd").onclick=()=>openM({dt:T0,amb:AMB[0],meio:MEIO[0],st:"Pendente"});
+$("m_cx").onclick=()=>$("dlg2").close();
+$("f2").addEventListener("submit",e=>{
+  if(e.submitter&&e.submitter.value!=="ok")return;
+  const v={};MF.forEach(k=>v[k]=$("m_"+k).value.trim());
+  if(editM.id)Object.assign(editM,v);else M.push({id:Math.max(0,...M.map(x=>x.id))+1,...v});
+  saveM();renderM();
+});
+$("m_del").onclick=()=>{M=M.filter(x=>x.id!==editM.id);saveM();$("dlg2").close();renderM()};
+$("cs").onchange=renderM;
+$("ccsv").onclick=()=>{
+  const rows=[["Data","Assunto","Ambiente","De","Para","Telefone","E-mail","Meio","Decisão / resumo","Retorno até","Status"]].concat(M.map(m=>[fmt(m.dt),m.ass,m.amb,m.de,m.para,m.tel,m.mail,m.meio,m.res,fmt(m.pz),m.st]));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x||"").replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="comunicacao-obra.csv";a.click();
+};
+
+/* ===== Financeiro (Código Completo) ===== */
+const KF="financeiro-obra-v1";
+let F;try{F=JSON.parse(localStorage.getItem(KF)||"null")}catch(e){F=null}
+if(!F||typeof F!=="object")F={};
+const saveF=()=>{try{localStorage.setItem(KF,JSON.stringify(F))}catch(e){}};
+const R=v=>(+v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+function totF(){let o=0,c=0,p=0,k=0;ETA.forEach(e=>{const f=F[e]||{},kk=cmp(e);o+=+f.o||0;c+=(+f.c||0)+kk;k+=kk;p+=+f.p||0});return{o,c,p,k}}
+function calcF(){
+  ETA.forEach((e,i)=>{const f=F[e]||{},k=cmp(e),o=+f.o||0,c=(+f.c||0)+k,p=+f.p||0;$("fk_"+i).textContent=R(k);
+    $("fa_"+i).textContent=R(c-p);const d=$("fd_"+i);d.textContent=R(c-o);d.className=c>o?"late":""});
+  const t=totF();
+  $("ft_o").innerHTML="<b>"+R(t.o)+"</b>";$("ft_c").innerHTML="<b>"+R(t.c-t.k)+"</b>";$("ft_k").innerHTML="<b>"+R(t.k)+"</b>";$("ft_p").innerHTML="<b>"+R(t.p)+"</b>";
+  $("ft_a").innerHTML="<b>"+R(t.c-t.p)+"</b>";$("ft_d").innerHTML="<b>"+R(t.c-t.o)+"</b>";$("ft_d").className=t.c>t.o?"late":"";
+}
+function renderF(){
+  $("ft").innerHTML='<thead><tr><th>Etapa</th><th>Orçado</th><th>Contratado (serviços)</th><th>Pago</th><th>Compras fechadas</th><th>A pagar</th><th>Desvio</th></tr></thead><tbody>'+
+  ETA.map((e,i)=>{const f=F[e]||{};return `<tr><td>${esc(e)}</td>`+["o","c","p"].map(k=>`<td><input class="n" type="number" min="0" step="0.01" data-e="${i}" data-k="${k}" value="${f[k]||""}"></td>`).join("")+`<td id="fk_${i}"></td><td id="fa_${i}"></td><td id="fd_${i}"></td></tr>`}).join("")+
+  '<tr><td><b>Total</b></td><td id="ft_o"></td><td id="ft_c"></td><td id="ft_p"></td><td id="ft_k"></td><td id="ft_a"></td><td id="ft_d"></td></tr></tbody>';
+  calcF();
+}
+$("ft").addEventListener("input",e=>{const t=e.target;if(!t.dataset.k)return;const en=ETA[t.dataset.e];(F[en]=F[en]||{})[t.dataset.k]=t.value;saveF();calcF()});
+$("fcsv").onclick=()=>{
+  const n=v=>(+v||0).toFixed(2).replace(".",",");
+  const rows=[["Etapa","Orçado","Contratado (serviços + compras)","Pago","A pagar","Desvio"]].concat(ETA.map(e=>{const f=F[e]||{},o=+f.o||0,c=(+f.c||0)+cmp(e),p=+f.p||0;return[e,n(o),n(c),n(p),n(c-p),n(c-o)]}));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="financeiro-obra.csv";a.click();
+};
+
+/* ===== Painel KPI (Código Completo) ===== */
+function renderP(){
+  const t=S.length,dn=S.filter(s=>s.c==="done").length,dg=S.filter(s=>s.c==="doing").length;
+  const late=S.filter(s=>s.d&&s.d<T0&&s.c!=="done").length;
+  const pz=S.map(s=>s.d).filter(Boolean).sort().pop();
+  const f=totF(),cp=M.filter(m=>m.st==="Pendente").length;
+  const K=[["Ações",t],["Concluídas",dn+" ("+(t?Math.round(dn*100/t):0)+"%)"],["Em andamento",dg],["Atrasadas",late],["Último prazo cadastrado",pz?fmt(pz):"—"],["Comunicações pendentes",cp],["Orçado",R(f.o)],["Contratado",R(f.c)],["Pago",R(f.p)],["Desvio (contratado − orçado)",R(f.c-f.o)]];
+  $("pk").innerHTML=K.map(k=>`<div class="kc"><small>${k[0]}</small><b>${k[1]}</b></div>`).join("");
+  $("pb").innerHTML=ETA.map(e=>{const a=S.filter(s=>s.e===e),d=a.filter(s=>s.c==="done").length,p=a.length?Math.round(d*100/a.length):0;
+    return `<div class="bar"><span>${esc(e)}</span><i><u style="width:${p}%"></u></i><span>${d}/${a.length}</span></div>`}).join("");
+}
+
+function setV(v){
+  ["com","fin","pnl","rdo","cot","med","qual"].forEach(x=>document.body.classList.toggle("v"+x,x===v));
+  [["tk",""],["tc","com"],["tr","rdo"],["tq","cot"],["tm","med"],["tz","qual"],["tf","fin"],["tp","pnl"]].forEach(x=>$(x[0]).classList.toggle("on",x[1]===v));
+  if(v==="com")renderM();if(v==="fin")renderF();if(v==="pnl")renderP();if(v==="rdo")renderR();if(v==="cot")renderQ();if(v==="med")renderMD();if(v==="qual")renderZ();
+}
+$("tk").onclick=()=>setV("");$("tc").onclick=()=>setV("com");$("tf").onclick=()=>setV("fin");$("tp").onclick=()=>setV("pnl");$("tr").onclick=()=>setV("rdo");$("tq").onclick=()=>setV("cot");$("tm").onclick=()=>setV("med");$("tz").onclick=()=>setV("qual");
+const cmp=e=>Q.filter(r=>r.e===e&&["Pedido feito","Em produção","Entregue"].includes(r.st)).reduce((s,r)=>{const c=r.q[r.esc];return s+(c?+c.v||0:0)},0);
+
+/* ===== Medições (Código Completo) ===== */
+const KM="medicoes-obra-v1",MST=["Em medição","Aprovada","Paga"];
+let MD;try{MD=JSON.parse(localStorage.getItem(KM)||"null")}catch(e){MD=null}
+if(!Array.isArray(MD))MD=[];
+const saveMD=()=>{try{localStorage.setItem(KM,JSON.stringify(MD))}catch(e){}};
+let editMD=null;
+$("md_et").innerHTML=ETA.map(a=>`<option>${esc(a)}</option>`).join("");
+$("md_st").innerHTML=MST.map(a=>`<option>${a}</option>`).join("");
+const mval=m=>(+m.vc||0)*(+m.pc||0)/100;
+function renderMD(){
+  const g={};MD.forEach(m=>{const k=m.emp||"Sem empreiteiro";(g[k]=g[k]||[]).push(m)});
+  const names=Object.keys(g).sort();
+  $("md_dl").innerHTML=names.map(k=>`<option value="${esc(k)}">`).join("");
+  let tm=0,tp=0;
+  $("mdl").innerHTML=names.length?names.map(n=>{
+    let vc=0,me=0,pg=0,ap=0;
+    g[n].forEach(m=>{vc+=+m.vc||0;const x=mval(m);me+=x;if(m.st==="Paga")pg+=x;else if(m.st==="Aprovada")ap+=x});
+    tm+=me;tp+=pg;
+    return `<div class="rc"><h3>${esc(n)}</h3><div class="tw"><table class="qt"><thead><tr><th>Serviço</th><th>Etapa</th><th>Contratado</th><th>% acum.</th><th>Medido</th><th>Data</th><th>Status</th><th></th></tr></thead><tbody>`+
+    [...g[n]].sort((x,y)=>(y.dt||"").localeCompare(x.dt||"")).map(m=>`<tr data-id="${m.id}"><td>${esc(m.serv)}</td><td>${esc(m.e)}</td><td>${R(m.vc)}</td><td>${+m.pc||0}%</td><td>${R(mval(m))}</td><td>${fmt(m.dt)}</td><td><span class="st ${m.st==="Paga"?"ok":""}">${esc(m.st)}</span></td><td><button data-mde="1">Editar</button></td></tr>`).join("")+
+    `</tbody></table></div><p>Contratado ${R(vc)} · Medido ${R(me)} · Pago ${R(pg)} · A pagar (aprovado) ${R(ap)} · Em medição ${R(me-pg-ap)}</p></div>`}).join(""):'<p style="color:var(--mu)">Nenhuma medição registrada. Clique em “Nova medição”.</p>';
+  $("mdtot").textContent="Total medido: "+R(tm)+" · pago: "+R(tp);
+}
+function openMD(m){
+  editMD=m;$("dt5").textContent=m.id?"Editar medição":"Nova medição";
+  $("md_emp").value=m.emp||"";$("md_sv").value=m.serv||"";$("md_et").value=m.e||ETA[0];
+  $("md_vc").value=m.vc||"";$("md_pc").value=m.pc||"";$("md_dt").value=m.dt||"";$("md_st").value=m.st||MST[0];$("md_ob").value=m.ob||"";
+  $("md_del").style.visibility=m.id?"visible":"hidden";$("dlg5").showModal();
+}
+$("mdnew").onclick=()=>openMD({dt:T0,st:MST[0]});
+$("mdl").addEventListener("click",e=>{if(!e.target.dataset.mde)return;const m=MD.find(x=>x.id==e.target.closest("tr").dataset.id);if(m)openMD(m)});
+$("md_cx").onclick=()=>$("dlg5").close();
+$("md_del").onclick=()=>{MD=MD.filter(x=>x.id!==editMD.id);saveMD();$("dlg5").close();renderMD()};
+$("f5").addEventListener("submit",e=>{
+  if(e.submitter&&e.submitter.value!=="ok")return;
+  const v={emp:$("md_emp").value.trim(),serv:$("md_sv").value.trim(),e:$("md_et").value,vc:$("md_vc").value,pc:$("md_pc").value,dt:$("md_dt").value,st:$("md_st").value,ob:$("md_ob").value.trim()};
+  if(editMD.id)Object.assign(editMD,v);else MD.push({id:Math.max(0,...MD.map(x=>x.id))+1,...v});
+  saveMD();renderMD();
+});
+$("mdcsv").onclick=()=>{
+  const rows=[["Empreiteiro","Serviço","Etapa","Contratado","% acumulado","Medido","Data","Status","Observações"]].concat(MD.map(m=>[m.emp,m.serv,m.e,R(m.vc),(+m.pc||0)+"%",R(mval(m)),fmt(m.dt),m.st,m.ob]));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x||"").replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="medicoes-obra.csv";a.click();
+};
+
+/* ===== Checklist de qualidade (Código Completo) ===== */
+const KZ="qualidade-obra-v1";
+let QL;try{QL=JSON.parse(localStorage.getItem(KZ)||"null")}catch(e){QL=null}
+if(!Array.isArray(QL)){
+  const gen=["Prumo, nível e esquadro das paredes","Pontos elétricos e tomadas testados","Esquadrias abrindo e vedando bem","Revestimentos e pisos sem peças trincadas ou ocas","Pintura uniforme, sem manchas","Limpeza final e retoques"];
+  const wet=["Estanqueidade da impermeabilização testada (72 h)","Caimento do piso e ralos conferidos","Instalações hidráulicas testadas sob pressão","Louças e metais instalados, sem vazamento"];
+  QL=[];let n=1;
+  AMB.filter(a=>a!=="Todos").forEach(a=>{(/Cozinha|Bwc/.test(a)?wet.concat(gen):gen).forEach(t=>QL.push({id:n++,a,t,ok:false}))});
+}
+const saveZ=()=>{try{localStorage.setItem(KZ,JSON.stringify(QL))}catch(e){}};
+function renderZ(){
+  $("zl").innerHTML=AMB.filter(a=>a!=="Todos").map(a=>{
+    const it=QL.filter(x=>x.a===a),ok=it.filter(x=>x.ok).length,p=it.length?Math.round(ok*100/it.length):0;
+    return `<div class="rc"><h3>${esc(a)} <span class="st ${p===100?"ok":""}">${ok}/${it.length} · ${p}%</span></h3><div class="pg"><u style="width:${p}%"></u></div>`+
+    it.map(x=>`<div class="ck"><input type="checkbox" id="zk${x.id}" data-zk="${x.id}" ${x.ok?"checked":""}><label for="zk${x.id}">${esc(x.t)}</label><button data-zx="${x.id}" aria-label="Remover item">×</button></div>`).join("")+
+    `<div class="tb" style="margin:8px 0 0"><input data-zi="1" placeholder="Novo item de verificação" style="flex:1"><button data-za="${esc(a)}">+ Adicionar</button></div></div>`}).join("");
+  const all=QL.length,okk=QL.filter(x=>x.ok).length;
+  $("ztot").textContent="Verificado: "+okk+"/"+all+(all?" ("+Math.round(okk*100/all)+"%)":"");
+}
+$("zl").addEventListener("change",e=>{if(!e.target.dataset.zk)return;const x=QL.find(i=>i.id==e.target.dataset.zk);if(x){x.ok=e.target.checked;saveZ();renderZ()}});
+$("zl").addEventListener("click",e=>{
+  const d=e.target.dataset;
+  if(d.zx){QL=QL.filter(i=>i.id!=d.zx);saveZ();renderZ()}
+  else if(d.za){const t=e.target.previousElementSibling.value.trim();if(!t)return;QL.push({id:Math.max(0,...QL.map(i=>i.id))+1,a:d.za,t,ok:false});saveZ();renderZ()}
+});
+
+/* ===== Cotações e compras (Código Completo) ===== */
+const KQ="cotacoes-obra-v1",QST=["Em cotação","Pedido feito","Em produção","Entregue","Cancelado"];
+let Q;try{Q=JSON.parse(localStorage.getItem(KQ)||"null")}catch(e){Q=null}
+if(!Array.isArray(Q))Q=[
+{id:1,it:"Esquadrias (janelas e portas)",a:"Todos",e:ETA[4],q:[],esc:"",st:"Em cotação",pd:"",en:"",ob:""},
+{id:2,it:"Bancadas de granito",a:"Cozinha/Lavanderia",e:ETA[9],q:[],esc:"",st:"Em cotação",pd:"",en:"",ob:""},
+{id:3,it:"Marcenaria (armários)",a:"Cozinha/Lavanderia",e:ETA[9],q:[],esc:"",st:"Em cotação",pd:"",en:"",ob:""}];
+const saveQ=()=>{try{localStorage.setItem(KQ,JSON.stringify(Q))}catch(e){}};
+let editQ=null;
+$("q_amb").innerHTML=AMB.map(a=>`<option>${esc(a)}</option>`).join("");
+$("q_eta").innerHTML=ETA.map(a=>`<option>${esc(a)}</option>`).join("");
+$("q_st").innerHTML=QST.map(a=>`<option>${a}</option>`).join("");
+const has=x=>x!==""&&x!==undefined&&x!==null;
+function renderQ(){
+  const fs=$("qfs").value;
+  $("qfs").innerHTML='<option value="">Todos os status</option>'+QST.map(s=>`<option${s===fs?" selected":""}>${s}</option>`).join("");
+  let tot=0;Q.forEach(r=>{const c=r.q[r.esc];if(r.st!=="Cancelado"&&c)tot+=+c.v||0});
+  $("qtot").textContent="Total dos escolhidos: "+R(tot);
+  const rows=Q.filter(r=>!fs||r.st===fs);
+  $("ql").innerHTML=rows.length?rows.map(r=>{
+    const vs=r.q.map(x=>+x.v).filter(x=>x>0),ps=r.q.filter(x=>has(x.p)).map(x=>+x.p);
+    const mv=vs.length>1?Math.min(...vs):null,mp=ps.length>1?Math.min(...ps):null;
+    const ch=r.q[r.esc];
+    const late=r.en&&r.en<T0&&r.st!=="Entregue"&&r.st!=="Cancelado";
+    const tb=r.q.length?'<div class="tw"><table class="qt"><thead><tr><th>Fornecedor</th><th>Valor</th><th>Prazo</th></tr></thead><tbody>'+r.q.map((x,i)=>`<tr class="${r.esc===i?"sel":""}"><td>${esc(x.n)||"—"}${r.esc===i?' <span class="bd">escolhido</span>':""}</td><td>${x.v?R(x.v):"—"}${mv!==null&&+x.v===mv?' <span class="bd">menor preço</span>':""}</td><td>${has(x.p)?x.p+" dias":"—"}${mp!==null&&has(x.p)&&+x.p===mp?' <span class="bd">menor prazo</span>':""}</td></tr>`).join("")+'</tbody></table></div>':'<p style="color:var(--mu)">Nenhuma cotação registrada.</p>';
+    return `<div class="rc" data-id="${r.id}"><h3>${esc(r.it)} <span class="st">${esc(r.a)}</span> <span class="st ${r.st==="Entregue"?"ok":""}">${esc(r.st)}</span><span style="flex:1"></span><button data-qe="1">Editar</button></h3>${tb}<p>Pedido: ${fmt(r.pd)||"—"} · Entrega prevista: <span class="${late?"late":""}">${fmt(r.en)||"—"}${late?" · atrasada":""}</span>${ch&&ch.v?" · Valor escolhido: "+R(ch.v):""}</p>${r.ob?`<p style="color:var(--mu)">${esc(r.ob)}</p>`:""}</div>`}).join(""):'<p style="color:var(--mu)">Nenhum item de compra.</p>';
+}
+const qRow=x=>{x=x||{};return `<div class="qr"><input class="qn" placeholder="Fornecedor" value="${esc(x.n)}"><input class="qv" type="number" min="0" step="0.01" placeholder="R$" value="${has(x.v)?x.v:""}"><input class="qp" type="number" min="0" placeholder="Dias" value="${has(x.p)?x.p:""}"><button type="button" class="qx" aria-label="Remover cotação">×</button></div>`};
+const qRead=()=>[...$("q_list").querySelectorAll(".qr")].map(d=>({n:d.querySelector(".qn").value.trim(),v:d.querySelector(".qv").value,p:d.querySelector(".qp").value})).filter(x=>x.n||x.v);
+function qSel(keep){
+  const q=qRead();
+  $("q_esc").innerHTML='<option value="">— nenhum —</option>'+q.map((x,i)=>`<option value="${i}">${esc(x.n)||"Cotação "+(i+1)}</option>`).join("");
+  if(has(keep)&&keep<q.length)$("q_esc").value=String(keep);
+}
+function openQ(r){
+  editQ=r;$("dt4").textContent=r.id?"Editar item":"Novo item de compra";
+  $("q_it").value=r.it||"";$("q_amb").value=r.a||AMB[0];$("q_eta").value=r.e||ETA[0];
+  $("q_list").innerHTML=((r.q&&r.q.length)?r.q:[{}]).map(qRow).join("");qSel(r.esc);
+  $("q_st").value=r.st||QST[0];$("q_pd").value=r.pd||"";$("q_en").value=r.en||"";$("q_ob").value=r.ob||"";
+  $("q_del").style.visibility=r.id?"visible":"hidden";$("dlg4").showModal();
+}
+$("q_add").onclick=()=>{const c=$("q_esc").value;$("q_list").insertAdjacentHTML("beforeend",qRow());qSel(c===""?"":+c)};
+$("q_list").addEventListener("click",e=>{if(e.target.classList.contains("qx")){e.target.closest(".qr").remove();qSel("")}});
+$("q_list").addEventListener("input",()=>{const c=$("q_esc").value;qSel(c===""?"":+c)});
+$("qnew").onclick=()=>openQ({st:QST[0]});
+$("ql").addEventListener("click",e=>{if(!e.target.dataset.qe)return;const r=Q.find(x=>x.id==e.target.closest(".rc").dataset.id);if(r)openQ(r)});
+$("q_cx").onclick=()=>$("dlg4").close();
+$("q_del").onclick=()=>{Q=Q.filter(x=>x.id!==editQ.id);saveQ();$("dlg4").close();renderQ()};
+$("qfs").onchange=renderQ;
+$("f4").addEventListener("submit",e=>{
+  if(e.submitter&&e.submitter.value!=="ok")return;
+  const q=qRead(),sv=$("q_esc").value;
+  const v={it:$("q_it").value.trim(),a:$("q_amb").value,e:$("q_eta").value,q,esc:sv===""?"":+sv,st:$("q_st").value,pd:$("q_pd").value,en:$("q_en").value,ob:$("q_ob").value.trim()};
+  if(!v.en&&v.pd&&v.esc!==""&&has(q[v.esc].p)){const d=new Date(v.pd+"T12:00:00");d.setDate(d.getDate()+ +q[v.esc].p);v.en=d.toISOString().slice(0,10)}
+  if(editQ.id)Object.assign(editQ,v);else Q.push({id:Math.max(0,...Q.map(x=>x.id))+1,...v});
+  saveQ();renderQ();
+});
+$("qcsv").onclick=()=>{
+  const rows=[["Item","Ambiente","Etapa","Status","Fornecedor escolhido","Valor escolhido","Prazo (dias)","Data do pedido","Entrega prevista","Cotações","Observações"]].concat(Q.map(r=>{const c=r.q[r.esc]||{};
+    return [r.it,r.a,r.e,r.st,c.n||"",c.v?R(c.v):"",has(c.p)?c.p:"",fmt(r.pd),fmt(r.en),r.q.map(x=>x.n+": "+(x.v?R(x.v):"—")+" / "+(has(x.p)?x.p+"d":"—")).join(" | "),r.ob]}));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x||"").replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="cotacoes-obra.csv";a.click();
+};
+
+/* ===== Diário de Obras RDO (Código Completo) ===== */
+const KR="rdo-obra-v1",RF=["dt","cm","eq","at","oc","ob","apr"];
+let RD;try{RD=JSON.parse(localStorage.getItem(KR)||"null")}catch(e){RD=null}
+if(!Array.isArray(RD))RD=[];
+let rPh=[],editR=null;
+const saveR=()=>{let ok=true;try{localStorage.setItem(KR,JSON.stringify(RD))}catch(e){ok=false}$("rerr").hidden=ok;return ok};
+$("r_cm").innerHTML=["Ensolarado","Nublado","Chuvoso","Variável"].map(a=>`<option>${a}</option>`).join("");
+function renderR(){
+  const rows=[...RD].sort((a,b)=>(b.dt||"").localeCompare(a.dt||""));
+  const blk=(t,x)=>x?`<small>${t}</small><p>${esc(x)}</p>`:"";
+  $("rl").innerHTML=rows.length?rows.map(r=>{
+    const ap=r.st==="Aprovado";
+    return `<div class="rc" data-id="${r.id}"><h3>${fmt(r.dt)} <span class="st">${esc(r.cm)}</span> <span class="st ${ap?"ok":""}">${ap?"Aprovado por "+esc(r.apr)+" em "+fmt(r.aprDt):"Rascunho"}</span><span style="flex:1"></span><button data-re="1">${ap?"Ver":"Editar"}</button></h3>`+
+    blk("Equipe",r.eq)+blk("Atividades",r.at)+blk("Ocorrências",r.oc)+blk("Observações",r.ob)+
+    (r.fotos&&r.fotos.length?`<div class="ph">${r.fotos.map((f,i)=>`<img src="${f}" alt="Foto ${i+1}">`).join("")}</div>`:"")+"</div>"}).join(""):'<p style="color:var(--mu)">Nenhum RDO registrado ainda. Clique em “Novo RDO”.</p>';
+}
+function renderPh(){
+  const lock=editR&&editR.st==="Aprovado";
+  $("r_ph").innerHTML=rPh.map((f,i)=>`<span><img src="${f}" alt="Foto ${i+1}">${lock?"":`<b data-x="${i}">×</b>`}</span>`).join("");
+}
+function openR(r){
+  editR=r;const lock=r.st==="Aprovado";
+  $("dt3").textContent=r.id?(lock?"RDO aprovado":"Editar RDO"):"Novo RDO";
+  RF.forEach(k=>$("r_"+k).value=r[k]||"");
+  rPh=[...(r.fotos||[])];renderPh();
+  $("rf").disabled=lock;$("r_save").hidden=lock;$("r_ap").hidden=lock;$("r_re").hidden=!lock;
+  $("r_del").style.visibility=(r.id&&!lock)?"visible":"hidden";
+  if(!$("dlg3").open)$("dlg3").showModal();
+}
+function shrink(f){return new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.6))};im.onerror=no;im.src=fr.result};fr.onerror=no;fr.readAsDataURL(f)})}
+$("r_f").onchange=async e=>{
+  for(const f of e.target.files){if(rPh.length>=6)break;try{rPh.push(await shrink(f))}catch(x){}}
+  e.target.value="";renderPh();
+};
+$("r_ph").onclick=e=>{if(e.target.dataset.x){rPh.splice(+e.target.dataset.x,1);renderPh()}};
+$("radd").onclick=()=>openR({dt:T0,cm:"Ensolarado",st:"Rascunho"});
+$("rl").addEventListener("click",e=>{
+  if(!e.target.dataset.re)return;
+  const r=RD.find(x=>x.id==e.target.closest(".rc").dataset.id);if(r)openR(r);
+});
+$("r_cx").onclick=()=>$("dlg3").close();
+$("r_save").onclick=()=>{$("r_apr").required=false};
+$("r_ap").onclick=()=>{$("r_apr").required=true};
+$("r_re").onclick=()=>{editR.st="Rascunho";editR.apr="";editR.aprDt="";saveR();renderR();openR(editR)};
+$("r_del").onclick=()=>{RD=RD.filter(x=>x.id!==editR.id);saveR();$("dlg3").close();renderR()};
+$("f3").addEventListener("submit",e=>{
+  const ap=e.submitter&&e.submitter.id==="r_ap";
+  const v={};RF.forEach(k=>v[k]=$("r_"+k).value.trim());
+  v.fotos=[...rPh];
+  if(ap){v.st="Aprovado";v.aprDt=T0}else{v.st="Rascunho";v.apr="";v.aprDt=""}
+  if(editR.id)Object.assign(editR,v);else RD.push({id:Math.max(0,...RD.map(x=>x.id))+1,...v});
+  saveR();renderR();
+});
+$("rcsv").onclick=()=>{
+  const rows=[["Data","Clima","Equipe","Atividades","Ocorrências","Observações","Status","Aprovado por","Data da aprovação","Fotos"]].concat(RD.map(r=>[fmt(r.dt),r.cm,r.eq,r.at,r.oc,r.ob,r.st,r.apr,fmt(r.aprDt),(r.fotos||[]).length]));
+  const csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x||"").replace(/"/g,'""')+'"').join(";")).join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="rdo-obra.csv";a.click();
+};
+
+// Inicialização
+render();
+renderM();
+</script>
+</body>
+</html>
